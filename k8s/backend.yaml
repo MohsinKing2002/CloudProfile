@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloudprofile-backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: cloudprofile-backend
+  template:
+    metadata:
+      labels:
+        app: cloudprofile-backend
+    spec:
+      containers:
+        - name: clodprofile-backend
+          image: public.ecr.aws/t3q3s6c7/clodprofile-backend:latest
+          ports:
+            - containerPort: 5001
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cloudprofile-backend-service
+spec:
+  type: ClusterIP
+  selector:
+    app: cloudprofile-backend
+  ports:
+    - port: 5001
+      targetPort: 5001

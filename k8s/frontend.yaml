@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloudprofile-frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: cloudprofile-frontend
+  template:
+    metadata:
+      labels:
+        app: cloudprofile-frontend
+    spec:
+      containers:
+        - name: clodprofile-ui
+          image: public.ecr.aws/t3q3s6c7/clodprofile-ui:latest
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cloudprofile-frontend-service
+spec:
+  type: ClusterIP
+  selector:
+    app: cloudprofile-frontend
+  ports:
+    - port: 80
+      targetPort: 80
