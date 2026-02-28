@@ -1,6 +1,6 @@
 # CloudProfile
 
-**A production-style full-stack AI-powered web application built with the MERN stack, containerized with Docker, deployed on AWS EC2, and automated with GitLab CI/CD.**
+**A production-style full-stack AI-powered web application built with the MERN stack, containerized with Docker, deployed on AWS EC2, and automated with Github Actions**
 
 > Built as a portfolio project to demonstrate real-world DevOps and cloud engineering skills including containerization, cloud deployment, SSL configuration, CI/CD automation, and Kubernetes orchestration.
 
@@ -45,7 +45,7 @@ This project was built to simulate a real production environment and demonstrate
 | Hosting          | Amazon EC2                 |
 | Reverse Proxy    | NGINX, Ingress             |
 | SSL/HTTPS        | Certbot (Let's Encrypt)    |
-| CI/CD            | GitLab CI/CD               |
+| CI/CD            | Github Actions             |
 | Orchestration    | Kubernetes                 |
 
 ---
@@ -98,7 +98,7 @@ cloudprofile/
 
 ### Overview
 
-The backend is a REST API built with Node.js and Express. It handles user authentication, profile management, avatar uploads to S3, and AI-powered Q&A via LangChain and Groq.
+The backend is a REST API built with Node.js, Express and Typescript. It handles user authentication, profile management, avatar uploads to S3, and AI-powered Q&A via LangChain and Groq.
 
 ### Key Features
 
@@ -111,14 +111,19 @@ The backend is a REST API built with Node.js and Express. It handles user authen
 
 ### API Endpoints
 
-| Method | Endpoint             | Description                     | Auth Required |
-| ------ | -------------------- | ------------------------------- | ------------- |
-| POST   | `/api/auth/register` | Register a new user             | No            |
-| POST   | `/api/auth/login`    | Login and receive JWT           | No            |
-| GET    | `/api/users/profile` | Get current user profile        | Yes           |
-| PUT    | `/api/users/profile` | Update user profile             | Yes           |
-| POST   | `/api/users/avatar`  | Upload avatar to S3             | Yes           |
-| POST   | `/api/ai/ask`        | Ask the AI assistant a question | Yes           |
+Base urls:
+
+1. local server: `http://localhost:3001/api/auth`
+2. prod server: `https://mohsin.ditinex.com/api/auth`
+
+| Method | Endpoint          | Description                          | Auth Required |
+| ------ | ----------------- | ------------------------------------ | ------------- |
+| POST   | `/register`       | Register a new user                  | No            |
+| POST   | `/login`          | Login, receive JWT and retrieve user | No            |
+| GET    | `/all-users`      | Get all user profiles.               | Yes           |
+| PUT    | `/update-profile` | Update user profile                  | Yes           |
+| DELETE | `/delete-profile` | Delete user profile                  | Yes           |
+| POST   | `/chat`           | Ask the AI assistant a question      | Yes           |
 
 ### Running Locally
 
@@ -126,23 +131,9 @@ The backend is a REST API built with Node.js and Express. It handles user authen
 cd backend
 cp .env.example .env
 # Fill in your environment variables
-npm install
-npm run dev
+pnpm install
+pnpm run dev
 ```
-
-### Dockerfile — Backend
-
-```dockerfile
-FROM node:20-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm install --production
-COPY . .
-EXPOSE 5000
-CMD ["node", "server.js"]
-```
-
-The backend image is built, tagged, and pushed to Amazon ECR by the CI/CD pipeline. On EC2, it runs as a Docker container on port `5000` and is proxied through NGINX.
 
 ---
 
@@ -166,43 +157,9 @@ The frontend is a React application built with Vite and styled using Tailwind CS
 cd frontend
 cp .env.example .env
 # Set VITE_API_URL to your backend URL
-npm install
-npm run dev
+pnpm install
+pnpm run dev
 ```
-
-### Dockerfile — Frontend
-
-```dockerfile
-FROM node:20-alpine AS build
-WORKDIR /app
-COPY package*.json ./
-RUN npm install
-COPY . .
-RUN npm run build
-
-FROM nginx:alpine
-COPY --from=build /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
-```
-
-The frontend uses a multi-stage Docker build. The first stage builds the React app and the second stage serves the static output using NGINX inside the container. This keeps the final image small and production-ready.
-
-### NGINX Config Inside Frontend Container
-
-```nginx
-server {
-    listen 80;
-    location / {
-        root /usr/share/nginx/html;
-        index index.html;
-        try_files $uri /index.html;
-    }
-}
-```
-
-This handles client-side routing by redirecting all requests to `index.html`.
 
 ---
 
@@ -212,24 +169,26 @@ This handles client-side routing by redirecting all requests to `index.html`.
 
 ```env
 # Server
-PORT=5000
-NODE_ENV=production
+PORT=5003
+ENV=prod
 
 # MongoDB
-MONGO_URI=mongodb+srv://<user>:<password>@cluster.mongodb.net/cloudprofile
+DB_URI=mongodb_atlas_uri
 
 # JWT
-JWT_SECRET=your_jwt_secret_key
-JWT_EXPIRES_IN=7d
+SECRET=your_jwt_secret_key
 
-# Amazon S3
-AWS_ACCESS_KEY_ID=your_aws_access_key
-AWS_SECRET_ACCESS_KEY=your_aws_secret_key
-AWS_REGION=us-east-1
-S3_BUCKET_NAME=cloudprofile-avatars
+#frontend server url for CORS setup
+FRONTEND_URL=frontend-url
 
 # Groq AI
 GROQ_API_KEY=your_groq_api_key
+
+# Amazon S3
+AWS_ACCESS_KEY=your_aws_access_key
+AWS_SECRET_KEY=your_aws_secret_key
+AWS_REGION=us-east-1
+AWS_BUCKET=cloudprofile-avatars
 ```
 
 ### Frontend — `.env`
@@ -239,21 +198,15 @@ GROQ_API_KEY=your_groq_api_key
 VITE_API_URL=https://your-domain.com/api
 ```
 
-> **Security Note:** Never commit `.env` files to version control. Use `.env.example` files as templates and store actual secrets in GitLab CI/CD variables or AWS Secrets Manager.
-
 ---
 
 ## CI/CD Pipeline
 
-The CI/CD pipeline is defined in `.gitlab-ci.yml` and runs automatically on every push to the `main` branch.
+The CI/CD pipelines for both backend and frontend is defined in `.github/workflows` directory and runs on manual trigger from github ui.
 
-### Pipeline Stages
+### Pipeline Flow
 
-```
-┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐
-│  build   │────►│   push   │────►│  deploy  │────►│  verify  │
-└──────────┘     └──────────┘     └──────────┘     └──────────┘
-```
+## ![CI/CD flow Diagram](assets/cicd_flow.png)
 
 ### Stage-by-Stage Breakdown
 
