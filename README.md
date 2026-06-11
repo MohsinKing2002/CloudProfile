@@ -212,20 +212,20 @@ The CI/CD pipelines for both backend and frontend is defined in `.github/workflo
 
 **Stage 1 — build**
 
-- GitLab runner checks out the latest code
+- GHA runner checks out the latest code
 - Builds the Docker image for the backend using `docker build`
 - Builds the Docker image for the frontend using `docker build`
-- Tags each image with the GitLab commit SHA for traceability
+- Tags each image with the Github commit SHA for traceability
 
 **Stage 2 — push**
 
-- Authenticates to Amazon ECR using AWS credentials stored in GitLab CI/CD variables
+- Authenticates to Amazon ECR using AWS credentials stored in Github Actions secrets & variables
 - Pushes the backend and frontend Docker images to their respective ECR repositories
 - Also tags images with `latest` for easy reference
 
 **Stage 3 — deploy**
 
-- SSH's into the EC2 instance using a private key stored as a GitLab CI/CD variable
+- SSH's into the EC2 instance using a private key stored as a GHA secrets
 - Authenticates Docker on EC2 to pull from ECR
 - Pulls the latest backend and frontend images
 - Stops and removes old containers
@@ -236,44 +236,95 @@ The CI/CD pipelines for both backend and frontend is defined in `.github/workflo
 - Sends an HTTP request to the application's health check endpoint to confirm the deployment succeeded
 - Fails the pipeline if the app is not responding
 
-### `.gitlab-ci.yml` Overview
+### `.github/workflows/main.yaml` Overview
 
 ```yaml
-stages:
-  - build
-  - push
-  - deploy
-  - verify
+name: CI/CD Pipeline for Deployment
 
-variables:
-  BACKEND_IMAGE: $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/cloudprofile-backend
-  FRONTEND_IMAGE: $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/cloudprofile-frontend
+on:
+  push:
+    branches:
+      - master
 
-build:
-  stage: build
-  script:
-    - docker build -t $BACKEND_IMAGE:$CI_COMMIT_SHA ./backend
-    - docker build -t $FRONTEND_IMAGE:$CI_COMMIT_SHA ./frontend
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+  ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+  BACKEND_IMAGE: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/cloudprofile-backend
+  FRONTEND_IMAGE: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/cloudprofile-frontend
 
-push:
-  stage: push
-  script:
-    - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
-    - docker push $BACKEND_IMAGE:$CI_COMMIT_SHA
-    - docker push $FRONTEND_IMAGE:$CI_COMMIT_SHA
+jobs:
+  build:
+    runs-on: ubuntu-latest
 
-deploy:
-  stage: deploy
-  script:
-    - ssh -i $EC2_KEY ec2-user@$EC2_HOST "docker pull $BACKEND_IMAGE:latest && docker-compose up -d"
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-verify:
-  stage: verify
-  script:
-    - curl -f https://your-domain.com/api/health
+      - name: Build Backend Image
+        run: |
+          docker build -t $BACKEND_IMAGE:${{ github.sha }} ./backend
+
+      - name: Build Frontend Image
+        run: |
+          docker build -t $FRONTEND_IMAGE:${{ github.sha }} ./frontend
+
+  push:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        run: |
+          aws ecr get-login-password --region $AWS_REGION \
+          | docker login --username AWS --password-stdin $ECR_REGISTRY
+
+      - name: Build Images Again
+        run: |
+          docker build -t $BACKEND_IMAGE:${{ github.sha }} ./backend
+          docker build -t $FRONTEND_IMAGE:${{ github.sha }} ./frontend
+
+      - name: Push Images
+        run: |
+          docker push $BACKEND_IMAGE:${{ github.sha }}
+          docker push $FRONTEND_IMAGE:${{ github.sha }}
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: push
+
+    steps:
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_PRIVATE_KEY }}
+          script: |
+            docker pull $BACKEND_IMAGE:latest
+            docker-compose up -d
+
+  verify:
+    runs-on: ubuntu-latest
+    needs: deploy
+
+    steps:
+      - name: Verify Application
+        run: |
+          curl -f https://your-domain.com/api/health
 ```
 
-### GitLab CI/CD Variables Required
+### GHA Secrets & Variables Required
 
 | Variable                | Description                                |
 | ----------------------- | ------------------------------------------ |
@@ -525,52 +576,35 @@ kubectl logs deployment/cloudprofile-frontend
 
 ## Screenshots
 
-> Place all screenshots in the `screenshots/` folder and update the paths below.
-
 ### 1. Home / Landing Page
 
-![Landing Page](screenshots/landing-page.png)
-_The landing page with navigation and call-to-action._
+_The landing page with navigation bar and home layout._
+![Landing Page](assets/home.png)
 
 ### 2. User Registration
 
-![Register Page](screenshots/register.png)
 _User registration form with validation._
+![Register Page](assets/signup.png)
 
 ### 3. User Profile Page
 
-![Profile Page](screenshots/profile.png)
-_Logged-in user viewing and editing their profile._
+_Logged-in user profile view with logout, delete & edit their profile actions._
+![Profile Page](assets/profile.png)
 
 ### 4. Avatar Upload
 
-![Avatar Upload](screenshots/avatar-upload.png)
-_Profile picture upload — stored in Amazon S3._
+_Profile picture upload — that will be stored in Amazon S3._
+![Avatar Upload](assets/avatar_upload.png)
 
 ### 5. AI Assistant Chat
 
-![AI Chat](screenshots/ai-chat.png)
 _The project Q&A assistant powered by LangChain and Groq._
+![AI Chat](assets/ai_chat.png)
 
-### 6. GitLab CI/CD Pipeline
+### 6. Architecture Diagram
 
-![CI/CD Pipeline](screenshots/cicd-pipeline.png)
-_A successful GitLab pipeline run showing all stages._
-
-### 7. Amazon ECR — Docker Images
-
-![ECR](screenshots/ecr-images.png)
-_Backend and frontend images stored in Amazon ECR._
-
-### 8. EC2 Instance
-
-![EC2](screenshots/ec2-instance.png)
-_Running EC2 instance hosting the application._
-
-### 9. Architecture Diagram
-
-![Architecture](architecture-diagram.png)
 _Full system architecture diagram._
+![Architecture](assets/architecture.png)
 
 ---
 
@@ -611,8 +645,8 @@ This project covers the core skills expected of a junior DevOps or Cloud Enginee
 
 ### CI/CD Automation
 
-- Built a multi-stage GitLab CI/CD pipeline
-- Stored secrets securely as GitLab CI/CD variables
+- Built a multi-stage Github Action CI/CD pipeline
+- Stored secrets securely in Github Actions secrets & variables
 - Automated Docker build, push to ECR, SSH-based deployment, and health check verification
 
 ### Kubernetes
@@ -635,12 +669,12 @@ Use this as a bullet point list or short paragraph in your resume or LinkedIn pr
 
 ---
 
-**CloudProfile — Full-Stack AI Web Application | AWS, Docker, GitLab CI/CD**
+**CloudProfile — Full-Stack AI Web Application | AWS, Docker, GHA CI**
 
 - Built and deployed a production-style MERN stack application with AI integration using LangChain and Groq on Amazon EC2
 - Containerized frontend (React/Vite) and backend (Node.js/Express) using Docker with multi-stage builds; stored images in Amazon ECR
 - Configured NGINX as a reverse proxy with SSL/HTTPS using Certbot and Let's Encrypt
-- Implemented a GitLab CI/CD pipeline to automate Docker image builds, pushes to ECR, and SSH-based deployments on every commit to main
+- Implemented a GHA CI pipeline to automate Docker image builds, pushes to ECR, and SSH-based deployments on every commit to main
 - Integrated Amazon S3 for scalable user avatar storage with IAM-based access control
 - Wrote Kubernetes manifests (Deployment, Service, Ingress) for a portable, cloud-native deployment option
 - Applied DevOps best practices including secret management via CI/CD variables, health check verification, and infrastructure-as-code configuration
