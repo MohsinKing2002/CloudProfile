@@ -36,7 +36,18 @@ const ingestKnowledge = async () => {
   });
 
   // 6. save documents to mongodb
-  await KnowledgeChunkDB.insertMany(knowledgeChunks);
+  // upsert -> if exists then update - if not then insert
+  await KnowledgeChunkDB.bulkWrite(
+    knowledgeChunks.map((chunk) => ({
+      updateOne: {
+        filter: { chunkId: chunk.chunkId },
+        update: {
+          $set: chunk,
+        },
+        upsert: true,
+      },
+    })),
+  );
 
   // 7. print useful information
   console.log(`Successfully inserted ${knowledgeChunks.length} chunks.`);
