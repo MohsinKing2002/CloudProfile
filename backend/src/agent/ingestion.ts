@@ -2,6 +2,7 @@
 
 import { connectDB } from '../config/db.ts';
 import { KnowledgeChunkDB } from '../models/knowledgeChunkSchema.ts';
+import { generateChunkId } from './generateChunkId.ts';
 import { createEmbeddingsFromChunks } from './testEmbeddings.ts';
 import { createChunks } from './textChunking.ts';
 
@@ -19,13 +20,20 @@ const ingestKnowledge = async () => {
   const embeddings = await createEmbeddingsFromChunks(chunkStrings);
 
   // 5. create mongodb documents - text, embedding, metadata.source
-  const knowledgeChunks = embeddings.map((embedding, ind) => ({
-    text: chunkStrings[ind],
-    embedding,
-    metadata: {
-      source: 'data.txt',
-    },
-  }));
+  const knowledgeChunks = embeddings.map((embedding, ind) => {
+    const text = chunkStrings[ind];
+
+    if (!text) throw new Error(`Missing chunk text at index: ${ind}`);
+
+    return {
+      chunkId: generateChunkId(text),
+      text,
+      embedding,
+      metadata: {
+        source: 'data.txt',
+      },
+    };
+  });
 
   // 6. save documents to mongodb
   await KnowledgeChunkDB.insertMany(knowledgeChunks);

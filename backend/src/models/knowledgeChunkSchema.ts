@@ -1,6 +1,7 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IKnowledgeChunk extends Document {
+  chunkId: string;
   text: string;
   embedding: number[];
   metadata: {
@@ -9,6 +10,11 @@ export interface IKnowledgeChunk extends Document {
 }
 
 const knowledgeChunkSchema: Schema = new Schema({
+  chunkId: {
+    type: String,
+    unique: true,
+    required: true,
+  },
   text: {
     type: String,
     required: true,
