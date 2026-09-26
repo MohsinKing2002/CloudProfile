@@ -1,15 +1,11 @@
-import { connectDB } from '../config/db.ts';
 import { KnowledgeChunkDB } from '../models/knowledgeChunkSchema.ts';
-import { createEmbeddingsFromChunks } from './testEmbeddings.ts';
+import { generateEmbeddings } from './generateEmbeddings.ts';
 
 export const retrieveRelevantChunks = async (question: string) => {
-  // 1. connect mongodb
-  // await connectDB();
+  // 1. create embedding for question
+  const queryEmbedding = (await generateEmbeddings([question]))[0];
 
-  // 2. create embedding for question
-  const queryEmbedding = (await createEmbeddingsFromChunks([question]))[0];
-
-  // 3. retrieve chunks
+  // 2. retrieve chunks
   const results = await KnowledgeChunkDB.aggregate([
     {
       $vectorSearch: {
@@ -33,8 +29,6 @@ export const retrieveRelevantChunks = async (question: string) => {
     },
   ]);
 
-  // 4. return response
+  // 3. return response
   return results;
 };
-
-// await retrieveRelevantChunks('How is CloudProfile deployed?');

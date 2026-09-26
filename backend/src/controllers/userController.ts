@@ -7,7 +7,7 @@ import {
   generateToken,
 } from '../utilities/index.ts';
 import { UserDB } from '../models/userSchema.ts';
-import { createAgent } from '../agent/agent.ts';
+import { askProjectAssitant } from '../agent/ragService.ts';
 import { uploadAvatarAndGetUrl } from '../awsS3/index.ts';
 import { retrieveRelevantChunks } from '../agent/retriever.ts';
 import { buildContext } from '../agent/contextBuilder.ts';
@@ -255,18 +255,11 @@ export const getAnswersFromAI = async (
 
     if (!query) return errorHandler(res, 400, 'Query must not be empty');
 
-    const grokAgent = createAgent();
-    const results = await retrieveRelevantChunks(query);
-    const context = buildContext(results);
-    const response = await grokAgent.invoke({
-      context,
-      question: query,
-    });
+    const answer = await askProjectAssitant(query);
 
-    if (!response?.content)
-      return errorHandler(res, 500, 'Failed to generate response');
+    if (!answer) return errorHandler(res, 500, 'Failed to generate response');
 
-    return responseHandler(res, 200, '', { answer: response?.content });
+    return responseHandler(res, 200, '', { answer });
   } catch (error) {
     next(error);
   }

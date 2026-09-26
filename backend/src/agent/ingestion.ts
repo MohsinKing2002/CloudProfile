@@ -3,7 +3,7 @@
 import { connectDB } from '../config/db.ts';
 import { KnowledgeChunkDB } from '../models/knowledgeChunkSchema.ts';
 import { generateChunkId } from './generateChunkId.ts';
-import { createEmbeddingsFromChunks } from './testEmbeddings.ts';
+import { generateEmbeddings } from './generateEmbeddings.ts';
 import { createChunks } from './textChunking.ts';
 
 const ingestKnowledge = async () => {
@@ -17,7 +17,7 @@ const ingestKnowledge = async () => {
   const chunkStrings = chunks.map((chunk) => chunk.pageContent);
 
   // 4. generate embeddings
-  const embeddings = await createEmbeddingsFromChunks(chunkStrings);
+  const embeddings = await generateEmbeddings(chunkStrings);
 
   // 5. create mongodb documents - text, embedding, metadata.source
   const knowledgeChunks = embeddings.map((embedding, ind) => {
