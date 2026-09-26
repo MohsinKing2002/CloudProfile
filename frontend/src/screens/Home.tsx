@@ -1,4 +1,4 @@
-import { useEffect, useState, type FC } from "react";
+import React, { useEffect, useState, type FC } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
@@ -14,7 +14,23 @@ import type { UserProps } from "../types";
 import { processApiRequest } from "../apis";
 import toast from "react-hot-toast";
 
-const Card = ({ children, className = "" }: any) => (
+type ChatMessage = {
+  id: string;
+  question: string;
+  answer: string;
+};
+
+type CardProps = {
+  children: React.ReactNode;
+  className?: string;
+};
+
+type QuestionCardProps = {
+  ques: string;
+  setAskAIQuery: React.Dispatch<React.SetStateAction<string>>;
+};
+
+const Card = ({ children, className = "" }: CardProps) => (
   <div
     className={`h-full bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 ${className}`}
   >
@@ -22,7 +38,7 @@ const Card = ({ children, className = "" }: any) => (
   </div>
 );
 
-const SampleQuestionCard = ({ ques, setAskAIQuery }: any) => (
+const SampleQuestionCard = ({ ques, setAskAIQuery }: QuestionCardProps) => (
   <div
     onClick={() => setAskAIQuery(ques)}
     className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-900 cursor-pointer"
@@ -31,10 +47,22 @@ const SampleQuestionCard = ({ ques, setAskAIQuery }: any) => (
   </div>
 );
 
-const sampleQuestions = [
+const sampleQuestions: string[] = [
   "Can you explain the project’s main features?",
-  "Are there any planned AI features in the project?",
+  "What technologies are used in CloudProfile?",
   "Can you describe the project architecture?",
+  "Explain the AI architecture.",
+  "How does the AI assistant work?",
+  "How does authentication work in CloudProfile?",
+  "How are profile images stored?",
+  "Where is CloudProfile deployed?",
+  "What AWS services are used in the project?",
+  "How is the application deployed?",
+  "What DevOps practices are implemented?",
+  "How does the RAG pipeline work?",
+  "How does the project handle user data?",
+  "What database does CloudProfile use?",
+  "What payment gateway does CloudProfile use?",
 ];
 
 export const Home: FC = () => {
@@ -43,10 +71,12 @@ export const Home: FC = () => {
   const [chatLoading, setChatLoading] = useState<boolean>(false);
   const [userData, setUserData] = useState<UserProps[]>([]);
   const [filteredUserData, setFilteredUserData] = useState<UserProps[]>([]);
+  const [displayedQuestions, setDisplayedQuestions] = useState<string[]>([]);
   const [searchUserQuery, setSearchUserQuery] = useState<string>("");
   const [askAIQuery, setAskAIQuery] = useState<string>("");
-  const [rawAIAns, setRawAIAns] = useState<string>("");
-  const [aiAns, setAIAns] = useState<string>("");
+  const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
+  const [typingAnswer, setTypingAnswer] = useState("");
+  const [typingMessageId, setTypingMessageId] = useState<string | null>(null);
 
   /********** Functions *************/
 
@@ -66,17 +96,29 @@ export const Home: FC = () => {
   };
 
   const chatWithAI = async () => {
-    if (!askAIQuery) return toast.error("Query must not be empty!");
+    if (!askAIQuery.trim()) return toast.error("Query must not be empty!");
+
     setChatLoading(true);
+
     try {
       const res = await processApiRequest("POST", "/auth/chat", {
         query: askAIQuery,
       });
+
       if (res?.status) {
-        setRawAIAns(res?.data?.answer);
+        const message: ChatMessage = {
+          id: crypto.randomUUID(),
+          question: askAIQuery,
+          answer: res?.data?.answer,
+        };
+        setChatHistory((prev) => [message, ...prev]);
+
+        setTypingMessageId(message.id);
+        setTypingAnswer("");
       }
     } catch (error) {
       console.log("ERROR: AI Assistance", error);
+      toast.error("Failed to get AI response");
     } finally {
       setChatLoading(false);
     }
@@ -85,32 +127,49 @@ export const Home: FC = () => {
   /********** Useeffects *************/
   //response typewriter effect
   useEffect(() => {
-    if (!rawAIAns) return;
-    setAIAns(rawAIAns.charAt(0));
-    let i = 0;
+    if (!typingMessageId) return;
 
+    const message = chatHistory.find((chat) => chat.id === typingMessageId);
+    if (!message) return;
+
+    let index = 0;
     const interval = setInterval(() => {
-      setAIAns((prev) => prev + rawAIAns.charAt(i));
-      i++;
-      if (i >= rawAIAns.length) clearInterval(interval);
+      setTypingAnswer(message.answer.slice(0, index + 1));
+      index++;
+
+      if (index >= message.answer.length) {
+        clearInterval(interval);
+        setTypingMessageId(null);
+      }
     }, 15);
 
     return () => clearInterval(interval);
-  }, [rawAIAns]);
+  }, [typingMessageId, chatHistory]);
 
   useEffect(() => {
-    if (searchUserQuery.length) {
-      const query = searchUserQuery.toLowerCase();
+    const query = searchUserQuery.trim().toLowerCase();
 
-      const filteredUsers = filteredUserData.filter(
+    if (!query) {
+      setFilteredUserData(userData);
+      return;
+    }
+
+    setFilteredUserData(
+      userData.filter(
         (user: UserProps) =>
           user.name.toLowerCase().includes(query) ||
-          user.username.toLowerCase().includes(query)
-      );
+          user.username.toLowerCase().includes(query),
+      ),
+    );
+  }, [searchUserQuery, userData]);
 
-      setFilteredUserData(filteredUsers);
-    } else setFilteredUserData(userData);
-  }, [searchUserQuery]);
+  useEffect(() => {
+    const shuffled = [...sampleQuestions]
+      .sort(() => Math.random() - 0.5)
+      .slice(0, 4);
+
+    setDisplayedQuestions(shuffled);
+  }, []);
 
   useEffect(() => {
     fetchUserData();
@@ -153,25 +212,27 @@ export const Home: FC = () => {
             <h1 className="text-2xl sm:text-4xl font-extrabold text-gray-900 dark:text-white mb-5 leading-tight">
               Welcome to CloudProfile
             </h1>
-            <p className=" text-gray-600 dark:text-gray-400 leading-relaxed text-base">
-              A full-stack CRUD web application built using React (Vite) for the
-              frontend and Node.js + Express + MongoDB for the backend. The
-              project showcases complete MERN development skills, along with
-              CI/CD integration for automated deployment. <br />
-              It’s hosted on AWS with Nginx as a reverse proxy server,
-              demonstrating end-to-end web app deployment and DevOps practices.
-              <br />
-              <div className="mt-2 text-sm font-semibold text-blue-600 dark:text-blue-400 ps-3">
+            <>
+              <p className=" text-gray-600 dark:text-gray-400 leading-relaxed text-base">
+                A full-stack CRUD web application built using React (Vite) for
+                the frontend and Node.js + Express + MongoDB for the backend.
+                The project showcases complete MERN development skills, along
+                with CI/CD integration for automated deployment. <br />
+                It’s hosted on AWS with Nginx as a reverse proxy server,
+                demonstrating end-to-end web app deployment and DevOps
+                practices.
+              </p>
+              <div className="mt-3 text-sm font-semibold text-blue-600 dark:text-blue-400 ps-3">
                 ~ Md Mohsin Raja
               </div>
-            </p>
+            </>
             <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-900">
                 <p className="text-xs font-medium text-blue-600 dark:text-blue-400">
                   Total Users
                 </p>
                 <p className="text-3xl font-bold text-gray-900 dark:text-white">
-                  {userData.length ?? "5K+"}
+                  {userData.length}
                 </p>
               </div>
               <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-900">
@@ -222,33 +283,52 @@ export const Home: FC = () => {
           </button>
         </div>
         <div className="flex flex-col-reverse sm:flex-row flex-wrap gap-x-8 gap-y-4">
+          {/***************** sample question section *************/}
           <div className="mt-6 space-y-3 border-t pt-4 border-gray-100 dark:border-gray-700">
             <p className="font-semibold text-gray-700 dark:text-gray-300">
               Sample Questions
             </p>
             <div className="flex items-center flex-row flex-wrap gap-x-8 gap-y-4">
-              {sampleQuestions?.map((ques: string, index: number) => (
+              {displayedQuestions.map((ques: string) => (
                 <SampleQuestionCard
-                  key={index}
+                  key={ques}
                   ques={ques}
                   setAskAIQuery={setAskAIQuery}
                 />
               ))}
             </div>
           </div>
-          {aiAns && (
-            <div className="mt-5 border-t pt-4 px-2 border-gray-100 dark:border-gray-700">
-              <div className="flex items-start pb-4">
-                <MessageCircleQuestionMark className="mr-2" />
-                <p className="text-base sm:text-xl font-semibold text-gray-700 dark:text-gray-300">
-                  {askAIQuery}
-                </p>
-              </div>
-              <div className="sm:pl-4">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {aiAns.replace(/\\n/g, "\n").replace(/(\d\.)/g, "\n$1")}
-                </ReactMarkdown>
-              </div>
+
+          {/**************** chat history with then new one in typing effect. *****************/}
+          {chatHistory.length > 0 && (
+            <div className="mt-5 border-t pt-4 border-gray-100 dark:border-gray-700">
+              {chatHistory.map((chat) => {
+                const isTyping = chat.id === typingMessageId;
+                const answer = isTyping ? typingAnswer : chat.answer;
+
+                return (
+                  <div
+                    key={chat.id}
+                    className="border-b border-gray-100 dark:border-gray-700 py-5 last:border-b-0"
+                  >
+                    <div className="flex items-start pb-4">
+                      <MessageCircleQuestionMark className="mr-2 shrink-0" />
+
+                      <p className="text-base sm:text-xl font-semibold text-gray-700 dark:text-gray-300">
+                        {chat.question}
+                      </p>
+                    </div>
+
+                    <div className="sm:pl-4">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {answer
+                          .replace(/\\\n/g, "\n")
+                          .replace(/(\d\.)/g, "\n$1")}
+                      </ReactMarkdown>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
