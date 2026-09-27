@@ -114,11 +114,32 @@ export const updateUser = async (
   next: NextFunction,
 ) => {
   try {
-    const { name, bio } = req.body;
     const user = req.user;
+    if (!user) return errorHandler(res, 401, 'Unauthorized');
 
-    if (name && user) user.name = name;
-    if (bio && user) user.bio = bio;
+    const { avatarKey, name, bio } = req.body;
+    // validate name
+    if (name !== undefined && typeof name !== 'string')
+      return errorHandler(res, 400, 'Name must be a string');
+
+    // validate bio
+    if (bio !== undefined && typeof bio !== 'string')
+      return errorHandler(res, 400, 'Bio must be a string');
+
+    // validate avatar
+    if (avatarKey !== undefined) {
+      if (typeof avatarKey !== 'string')
+        return errorHandler(res, 400, 'avatarKey must be a string');
+
+      const expectedPrefix = `avatars/${user?._id}/`;
+      if (!avatarKey.startsWith(expectedPrefix))
+        return errorHandler(res, 403, 'Invalid avatar key');
+    }
+
+    // update fields
+    user.name = name;
+    user.bio = bio;
+    user.avatarKey = avatarKey;
 
     await user?.save();
     return responseHandler(res, 200, 'Profile is updated successfully', user);

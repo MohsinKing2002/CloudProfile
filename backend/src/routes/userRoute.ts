@@ -1,4 +1,3 @@
-import multer, { type Multer } from 'multer';
 import { Router } from 'express';
 import {
   deleteUser,
@@ -13,15 +12,14 @@ import {
 import { isAuthenticated } from '../middlewares/authenticate.ts';
 
 const router: Router = Router();
-const uploader: Multer = multer();
 
 // auth api routes
 router.post('/login', loginUser);
 router.post('/register', registerUser);
 
 // authenticated routes
-router.put('/update-profile', uploader.none(), isAuthenticated, updateUser);
-router.put(
+router.put('/update-profile', isAuthenticated, updateUser);
+router.post(
   '/avatar/upload-url',
   isAuthenticated,
   generateAvatarUploadURLController,
