@@ -8,9 +8,7 @@ import {
 } from '../utilities/index.ts';
 import { UserDB } from '../models/userSchema.ts';
 import { askProjectAssitant } from '../agent/ragService.ts';
-import { uploadAvatarAndGetUrl } from '../awsS3/index.ts';
-import { retrieveRelevantChunks } from '../agent/retriever.ts';
-import { buildContext } from '../agent/contextBuilder.ts';
+import { generateAvatarUploadURL } from '../awsS3/presignedUpload.ts';
 
 /**
  * Register User API
@@ -116,21 +114,54 @@ export const updateUser = async (
   next: NextFunction,
 ) => {
   try {
-    const { avatar, name, bio } = req.body;
+    const { name, bio } = req.body;
     const user = req.user;
 
     if (name && user) user.name = name;
     if (bio && user) user.bio = bio;
-    if (avatar && user) {
-      const avatar_url = await uploadAvatarAndGetUrl(
-        avatar,
-        String(user.username),
-      );
-      user.avatar = avatar_url ?? '';
-    }
 
     await user?.save();
     return responseHandler(res, 200, 'Profile is updated successfully', user);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Upload User avatar - s3 presinged url
+ * @param Request req
+ * @param Response res
+ * @param NextFunction next
+ * @returns JSON data
+ */
+export const generateAvatarUploadURLController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const user = req.user;
+    const { contentType } = req.body;
+
+    if (!contentType || typeof contentType !== 'string')
+      return errorHandler(res, 400, 'Valid contentType is required');
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+
+    if (!allowedTypes.includes(contentType))
+      return errorHandler(res, 400, 'Only JPEG, PNG, WEBP images are allowed');
+
+    const result = await generateAvatarUploadURL(
+      String(user?._id),
+      contentType,
+    );
+
+    return responseHandler(
+      res,
+      200,
+      'Avatar Upload URL generated successfully',
+      result,
+    );
   } catch (error) {
     next(error);
   }

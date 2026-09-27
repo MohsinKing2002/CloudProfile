@@ -8,6 +8,7 @@ import {
   provideFeedback,
   registerUser,
   updateUser,
+  generateAvatarUploadURLController,
 } from '../controllers/userController.ts';
 import { isAuthenticated } from '../middlewares/authenticate.ts';
 
@@ -20,6 +21,11 @@ router.post('/register', registerUser);
 
 // authenticated routes
 router.put('/update-profile', uploader.none(), isAuthenticated, updateUser);
+router.put(
+  '/avatar/upload-url',
+  isAuthenticated,
+  generateAvatarUploadURLController,
+);
 router.post('/user-feedback', isAuthenticated, provideFeedback);
 router.delete('/delete-profile', isAuthenticated, deleteUser);
 router.get('/all-users', isAuthenticated, getAllUsers);
