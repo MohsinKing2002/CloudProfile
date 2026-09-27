@@ -1,4 +1,4 @@
-import { useContext, useState, type FC } from "react";
+import React, { useContext, useState, type FC } from "react";
 import { useNavigate } from "react-router-dom";
 import { FormButton, FormInput } from "../components";
 import { AuthContext } from "../contexts/AuthContext";
@@ -10,56 +10,71 @@ export const EditProfile: FC = () => {
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
   const [loading, setLoading] = useState<boolean>(false);
-  const [avatar, setAvatar] = useState<string | ArrayBuffer | null>(
-    user?.avatar
+  const [avatarFile, setAvatarFile] = useState<File | null>();
+  const [avatarPreview, setAvatarPreview] = useState<string>(
+    user?.avatarUrl ?? "",
   );
   const [editData, setEditData] = useState<EditProfileProps>({
     name: user?.name,
     bio: user?.bio,
   });
 
-  const handleImageUpload = (e: any) => {
-    const file = e.target.files[0];
-    const Reader = new FileReader();
-    Reader.readAsDataURL(file);
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
 
-    Reader.onload = () => {
-      if (Reader.readyState === 2) {
-        setAvatar(Reader.result);
-      }
-    };
+    if (!file) return;
+    setAvatarFile(file);
+    setAvatarPreview(URL.createObjectURL(file));
   };
 
   const handleEditProfileSubmit = async (e: any) => {
     e.preventDefault();
     try {
+      if (!avatarFile) return;
       setLoading(true);
-      const { name, bio } = editData;
-      const formData = new FormData();
-      formData.append("avatar", String(avatar));
-      formData.append("name", name);
-      formData.append("bio", bio);
 
-      const config = {
-        headers: {
-          "Content-Type": "multipart/form-data",
+      // get presigned url
+      const uploadRes = await processApiRequest(
+        "POST",
+        "/auth/avatar/upload-url",
+        {
+          contentType: avatarFile?.type,
         },
-      };
-
-      const res = await processApiRequest(
-        "PUT",
-        "/auth/update-profile",
-        formData,
-        config
       );
-      if (res?.status) {
-        setCacheWithExpiry("cloudProfile_user", res?.data);
+      if (uploadRes?.status) {
+        const { uploadURL, key } = uploadRes?.data;
 
-        //navigate to user profile after 1.5 seconds
-        setTimeout(() => {
-          navigate("/profile");
-          window.location.reload();
-        }, 1500);
+        // upload avatar to s3 using presigned url
+        const s3Res = await fetch(uploadURL, {
+          method: "PUT",
+          headers: {
+            "Content-Type": avatarFile?.type,
+          },
+          body: avatarFile,
+        });
+
+        if (!s3Res.ok) {
+          throw new Error("Failed to upload avatar to S3");
+        }
+
+        // update api call
+        const updateRes = await processApiRequest(
+          "PUT",
+          "/auth/update-profile",
+          {
+            ...editData,
+            avatarKey: key,
+          },
+        );
+        if (updateRes?.status) {
+          setCacheWithExpiry("cloudProfile_user", updateRes?.data);
+
+          // navigate to user profile after 1.5 seconds
+          setTimeout(() => {
+            navigate("/profile");
+            window.location.reload();
+          }, 1500);
+        }
       }
     } catch (error) {
       console.log("ERROR: Edit Profile", error);
@@ -81,10 +96,10 @@ export const EditProfile: FC = () => {
             </p>
           </div>
           <form className="space-y-6">
-            {avatar ? (
+            {avatarPreview ? (
               <img
                 className="w-32 h-32 rounded-full m-auto my-2 object-cover"
-                src={String(avatar)}
+                src={avatarPreview}
                 alt="post_prev"
               />
             ) : null}
