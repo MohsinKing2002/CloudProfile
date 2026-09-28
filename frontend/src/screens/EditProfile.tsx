@@ -5,6 +5,7 @@ import { AuthContext } from "../contexts/AuthContext";
 import type { EditProfileProps } from "../types";
 import { setCacheWithExpiry } from "../utilities";
 import { processApiRequest } from "../apis";
+import toast from "react-hot-toast";
 
 export const EditProfile: FC = () => {
   const { user } = useContext(AuthContext);
@@ -30,51 +31,61 @@ export const EditProfile: FC = () => {
   const handleEditProfileSubmit = async (e: any) => {
     e.preventDefault();
     try {
-      if (!avatarFile) return;
       setLoading(true);
+      let updateRes = null;
 
-      // get presigned url
-      const uploadRes = await processApiRequest(
-        "POST",
-        "/auth/avatar/upload-url",
-        {
-          contentType: avatarFile?.type,
-        },
-      );
-      if (uploadRes?.status) {
-        const { uploadURL, key } = uploadRes?.data;
-
-        // upload avatar to s3 using presigned url
-        const s3Res = await fetch(uploadURL, {
-          method: "PUT",
-          headers: {
-            "Content-Type": avatarFile?.type,
-          },
-          body: avatarFile,
-        });
-
-        if (!s3Res.ok) {
-          throw new Error("Failed to upload avatar to S3");
-        }
-
-        // update api call
-        const updateRes = await processApiRequest(
-          "PUT",
-          "/auth/update-profile",
+      if (avatarFile) {
+        // get presigned url
+        const uploadRes = await processApiRequest(
+          "POST",
+          "/auth/avatar/upload-url",
           {
-            ...editData,
-            avatarKey: key,
+            contentType: avatarFile?.type,
           },
         );
-        if (updateRes?.status) {
-          setCacheWithExpiry("cloudProfile_user", updateRes?.data);
+        if (uploadRes?.status) {
+          const { uploadURL, key } = uploadRes?.data;
 
-          // navigate to user profile after 1.5 seconds
-          setTimeout(() => {
-            navigate("/profile");
-            window.location.reload();
-          }, 1500);
+          // upload avatar to s3 using presigned url
+          const s3Res = await fetch(uploadURL, {
+            method: "PUT",
+            headers: {
+              "Content-Type": avatarFile?.type,
+            },
+            body: avatarFile,
+          });
+
+          if (!s3Res.ok) {
+            throw new Error("Failed to upload avatar to S3");
+          }
+
+          // update api call - with avatar.
+          updateRes = await processApiRequest("PUT", "/auth/update-profile", {
+            ...editData,
+            avatarKey: key,
+          });
         }
+      } else {
+        // validation - if trying with updated data.
+        if (editData?.name === user?.name && editData?.bio === user?.bio)
+          return toast.error("Name or Bio or Avatar must not be updated");
+
+        // update api call - without avatar.
+        updateRes = await processApiRequest(
+          "PUT",
+          "/auth/update-profile",
+          editData,
+        );
+      }
+
+      if (updateRes?.status) {
+        setCacheWithExpiry("cloudProfile_user", updateRes?.data);
+
+        // navigate to user profile after 1.5 seconds
+        setTimeout(() => {
+          navigate("/profile");
+          window.location.reload();
+        }, 1500);
       }
     } catch (error) {
       console.log("ERROR: Edit Profile", error);

@@ -93,9 +93,8 @@ export const loginUser = async (
     const { password: discardPass, ...userData } = user.toObject();
     const avatarKey = userData.avatarKey;
     let avatar = {
-      key: avatarKey,
       url: '',
-      expiry: Date.now() + 60 * 60 * 1000,
+      expiry: Date.now() + 59 * 60 * 1000,
     };
 
     // generate signed url - avatar view
@@ -171,14 +170,15 @@ export const updateUser = async (
     if (avatarKey !== undefined && oldAvatarKey && oldAvatarKey !== avatarKey)
       await deleteAvatarObject(oldAvatarKey);
 
-    // 6. avatar view - get signed url
     let avatar = {
-      key: avatarKey,
       url: '',
-      expiry: Date.now() + 60 * 60 * 1000,
+      expiry: Date.now() + 59 * 60 * 1000,
     };
-    if (avatarKey !== undefined)
-      avatar.url = await generateAvatarViewURL(avatarKey);
+
+    // 6. avatar view - get signed url
+    if (avatarKey !== undefined || user.avatarKey) {
+      avatar.url = await generateAvatarViewURL(avatarKey ?? user.avatarKey);
+    }
 
     return responseHandler(res, 200, 'Profile is updated successfully', {
       ...user.toObject(),

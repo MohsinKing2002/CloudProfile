@@ -9,7 +9,7 @@ export const setCacheWithExpiry = (key: string, value: any): void => {
     expiry = parsed.expiry; // keep old expiry
   } else {
     const now = Date.now();
-    expiry = now + 24 * 60 * 60 * 1000; // set fresh expiry on first save: 25hrs
+    expiry = now + 24 * 60 * 60 * 1000; // set fresh expiry on first save: 24hrs
   }
 
   const item = {

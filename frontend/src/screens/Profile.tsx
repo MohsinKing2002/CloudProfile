@@ -26,7 +26,7 @@ export const ProfilePage: FC = () => {
           <div className="flex-shrink-0">
             <img
               className="h-32 w-32 rounded-full ring-2 ring-blue-500 object-cover bg-gray-300"
-              src={user?.avatar ?? defaultImg}
+              src={user?.avatar?.url ?? defaultImg}
               alt="User profile"
             />
           </div>
