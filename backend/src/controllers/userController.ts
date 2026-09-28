@@ -9,6 +9,8 @@ import {
 import { UserDB } from '../models/userSchema.ts';
 import { askProjectAssitant } from '../agent/ragService.ts';
 import { generateAvatarUploadURL } from '../awsS3/presignedUpload.ts';
+import { avatarObjectExists, deleteAvatarObject } from '../awsS3/avatar.ts';
+import { generateAvatarViewURL } from '../awsS3/presignedDownload.ts';
 
 /**
  * Register User API
@@ -88,12 +90,23 @@ export const loginUser = async (
 
     const token = generateToken(String(user._id));
 
-    let userdata = { ...user.toObject(), token };
+    const { password: discardPass, ...userData } = user.toObject();
+    const avatarKey = userData.avatarKey;
+    let avatar = {
+      key: avatarKey,
+      url: '',
+      expiry: Date.now() + 60 * 60 * 1000,
+    };
+
+    // generate signed url - avatar view
+    if (avatarKey !== undefined)
+      avatar.url = await generateAvatarViewURL(avatarKey);
+
     return responseHandler(
       res,
       200,
       'User is logged in successfully',
-      userdata,
+      { ...userData, avatar },
       token,
     );
   } catch (error) {
@@ -117,32 +130,60 @@ export const updateUser = async (
     const user = req.user;
     if (!user) return errorHandler(res, 401, 'Unauthorized');
 
+    // *. store the old avatarKey - for deletion.
+    const oldAvatarKey = user.avatarKey;
+
     const { avatarKey, name, bio } = req.body;
-    // validate name
+    // 1. validate name
     if (name !== undefined && typeof name !== 'string')
       return errorHandler(res, 400, 'Name must be a string');
 
-    // validate bio
+    // 2. validate bio
     if (bio !== undefined && typeof bio !== 'string')
       return errorHandler(res, 400, 'Bio must be a string');
 
-    // validate avatar
+    // 3. validate avatar
     if (avatarKey !== undefined) {
+      // 3.1. avatar type validation
       if (typeof avatarKey !== 'string')
         return errorHandler(res, 400, 'avatarKey must be a string');
 
+      // 3.2. avatar prefix check - with user_id
       const expectedPrefix = `avatars/${user?._id}/`;
       if (!avatarKey.startsWith(expectedPrefix))
         return errorHandler(res, 403, 'Invalid avatar key');
+
+      // 3.3. S3 object existance validation.
+      const objExists = await avatarObjectExists(avatarKey);
+
+      if (!objExists)
+        return errorHandler(res, 400, 'Avatar object does not exists');
     }
 
-    // update fields
-    user.name = name;
-    user.bio = bio;
-    user.avatarKey = avatarKey;
+    // 4. update fields - save to db
+    if (name !== undefined) user.name = name;
+    if (bio !== undefined) user.bio = bio;
+    if (avatarKey !== undefined) user.avatarKey = avatarKey;
 
     await user?.save();
-    return responseHandler(res, 200, 'Profile is updated successfully', user);
+
+    // 5. delete old avatar from s3
+    if (avatarKey !== undefined && oldAvatarKey && oldAvatarKey !== avatarKey)
+      await deleteAvatarObject(oldAvatarKey);
+
+    // 6. avatar view - get signed url
+    let avatar = {
+      key: avatarKey,
+      url: '',
+      expiry: Date.now() + 60 * 60 * 1000,
+    };
+    if (avatarKey !== undefined)
+      avatar.url = await generateAvatarViewURL(avatarKey);
+
+    return responseHandler(res, 200, 'Profile is updated successfully', {
+      ...user.toObject(),
+      avatar,
+    });
   } catch (error) {
     next(error);
   }
