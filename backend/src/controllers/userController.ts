@@ -13,7 +13,7 @@ import { avatarObjectExists, deleteAvatarObject } from '../awsS3/avatar.ts';
 import { generateAvatarViewURL } from '../awsS3/presignedDownload.ts';
 
 /************** avatar expiry global var. ******************/
-const avatarExpiry = Date.now() + 59 * 60 * 1000;
+const avatarExpiry = Date.now() + 60 * 60 * 1000;
 
 /**
  * Register User API
@@ -218,12 +218,9 @@ export const generateAvatarViewURLController = async (
       expiry: avatarExpiry,
     };
 
-    return responseHandler(
-      res,
-      200,
-      'Avatar View URL generated successfully',
+    return responseHandler(res, 200, 'Avatar View URL generated successfully', {
       avatar,
-    );
+    });
   } catch (error) {
     next(error);
   }
