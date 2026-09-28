@@ -12,6 +12,9 @@ import { generateAvatarUploadURL } from '../awsS3/presignedUpload.ts';
 import { avatarObjectExists, deleteAvatarObject } from '../awsS3/avatar.ts';
 import { generateAvatarViewURL } from '../awsS3/presignedDownload.ts';
 
+/************** avatar expiry global var. ******************/
+const avatarExpiry = Date.now() + 59 * 60 * 1000;
+
 /**
  * Register User API
  * @param Request req
@@ -94,7 +97,7 @@ export const loginUser = async (
     const avatarKey = userData.avatarKey;
     let avatar = {
       url: '',
-      expiry: Date.now() + 59 * 60 * 1000,
+      expiry: avatarExpiry,
     };
 
     // generate signed url - avatar view
@@ -172,7 +175,7 @@ export const updateUser = async (
 
     let avatar = {
       url: '',
-      expiry: Date.now() + 59 * 60 * 1000,
+      expiry: avatarExpiry,
     };
 
     // 6. avatar view - get signed url
@@ -184,6 +187,43 @@ export const updateUser = async (
       ...user.toObject(),
       avatar,
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * User avatar view - s3 presinged url renewal
+ * @param Request req
+ * @param Response res
+ * @param NextFunction next
+ * @returns JSON data
+ */
+export const generateAvatarViewURLController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const user = req.user;
+    if (!user) return errorHandler(res, 401, 'Unathorized');
+    if (!user.avatarKey) return errorHandler(res, 404, 'Avatar not found');
+
+    const expectedPrefix = `avatars/${String(user._id)}`;
+    if (!user.avatarKey.startsWith(expectedPrefix))
+      return errorHandler(res, 403, 'Invalid avatar key');
+
+    const avatar = {
+      url: await generateAvatarViewURL(user.avatarKey),
+      expiry: avatarExpiry,
+    };
+
+    return responseHandler(
+      res,
+      200,
+      'Avatar View URL generated successfully',
+      avatar,
+    );
   } catch (error) {
     next(error);
   }
