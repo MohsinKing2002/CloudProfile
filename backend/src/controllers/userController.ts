@@ -12,8 +12,22 @@ import { generateAvatarUploadURL } from '../awsS3/presignedUpload.ts';
 import { avatarObjectExists, deleteAvatarObject } from '../awsS3/avatar.ts';
 import { generateAvatarViewURL } from '../awsS3/presignedDownload.ts';
 
-/************** avatar expiry global var. ******************/
+/************** avatar - expiry & validation ******************/
 const avatarExpiry = Date.now() + 60 * 60 * 1000;
+
+export const ALLOWED_AVATAR_TYPE = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+] as const;
+
+const isAllowedAvatarType = (
+  contentType: string,
+): contentType is (typeof ALLOWED_AVATAR_TYPE)[number] => {
+  return ALLOWED_AVATAR_TYPE.includes(
+    contentType as (typeof ALLOWED_AVATAR_TYPE)[number],
+  );
+};
 
 /**
  * Register User API
@@ -245,9 +259,8 @@ export const generateAvatarUploadURLController = async (
     if (!contentType || typeof contentType !== 'string')
       return errorHandler(res, 400, 'Valid contentType is required');
 
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
-
-    if (!allowedTypes.includes(contentType))
+    // typeguard
+    if (!isAllowedAvatarType(contentType))
       return errorHandler(res, 400, 'Only JPEG, PNG, WEBP images are allowed');
 
     const result = await generateAvatarUploadURL(
