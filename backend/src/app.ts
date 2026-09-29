@@ -1,10 +1,11 @@
 import express, { type Express } from 'express';
-import cookieParser from 'cookie-parser';
 import cors from 'cors';
-import { globalErrorHandler } from './middlewares/globalErrorHandler.ts';
-import { connectDB } from './config/db.ts';
-import userRoutes from './routes/userRoute.ts';
 import config from './config/config.ts';
+import cookieParser from 'cookie-parser';
+import userRoutes from './routes/userRoute.ts';
+import { connectDB } from './config/db.ts';
+import { startAvatarCleanupCron } from './cron/avatarCleanup.cron.ts';
+import { globalErrorHandler } from './middlewares/globalErrorHandler.ts';
 
 const app: Express = express();
 
@@ -28,6 +29,9 @@ connectDB();
 
 // Routes
 app.use('/api/auth', userRoutes);
+
+// Crons
+startAvatarCleanupCron();
 
 // Global error handling
 app.use(globalErrorHandler);

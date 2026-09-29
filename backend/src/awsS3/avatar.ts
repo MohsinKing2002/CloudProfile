@@ -1,4 +1,8 @@
-import { HeadObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import {
+  HeadObjectCommand,
+  DeleteObjectCommand,
+  ListObjectsV2Command,
+} from '@aws-sdk/client-s3';
 import { clientS3 } from './index.ts';
 import config from '../config/config.ts';
 
@@ -31,4 +35,18 @@ export const deleteAvatarObject = async (avatarKey: string): Promise<void> => {
       Key: avatarKey,
     }),
   );
+};
+
+// 3. list avatar objects
+export const listAvatarObjects = async (userId: string) => {
+  const prefix = `avatars/${userId}`;
+
+  const response = await clientS3.send(
+    new ListObjectsV2Command({
+      Bucket: config.AWS_BUCKET,
+      Prefix: prefix,
+    }),
+  );
+
+  return response.Contents ?? [];
 };
