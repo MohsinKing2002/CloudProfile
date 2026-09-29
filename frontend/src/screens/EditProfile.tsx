@@ -21,9 +21,13 @@ export const EditProfile: FC = () => {
   });
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const MAX_AVATAR_SIZE = 5 * 1024 * 1024;
     const file = e.target.files?.[0];
 
     if (!file) return;
+    if (file.size > MAX_AVATAR_SIZE)
+      return toast.error("Avatar must be 5 MB or smaller.");
+
     setAvatarFile(file);
     setAvatarPreview(URL.createObjectURL(file));
   };
