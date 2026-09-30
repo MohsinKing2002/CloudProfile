@@ -109,20 +109,21 @@ export const loginUser = async (
 
     const { password: discardPass, ...userData } = user.toObject();
     const avatarKey = userData.avatarKey;
-    let avatar = {
-      url: '',
-      expiry: avatarExpiry,
-    };
 
+    let avatar;
     // generate signed url - avatar view
-    if (avatarKey !== undefined)
-      avatar.url = await generateAvatarViewURL(avatarKey);
+    if (avatarKey && avatarKey.trim() !== '') {
+      avatar = {
+        url: await generateAvatarViewURL(avatarKey),
+        expiry: avatarExpiry,
+      };
+    }
 
     return responseHandler(
       res,
       200,
       'User is logged in successfully',
-      { ...userData, avatar },
+      { ...userData, ...(avatar && { avatar }) },
       token,
     );
   } catch (error) {
