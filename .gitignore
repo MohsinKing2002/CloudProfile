@@ -1,0 +1,10 @@
+##============== terraform .gitginore ==============##
+terraform/.terraform/
+terraform/terraform.tfstate
+terraform/terraform.tfstate.*
+terraform/terraform.tfvars
+terraform/*.tfplan
+
+
+##============== terraform .gitginore ==============##
+~/aws_keys
