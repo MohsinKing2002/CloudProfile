@@ -9,8 +9,8 @@ import {
   updateUser,
   generateAvatarUploadURLController,
   generateAvatarViewURLController,
-} from '../controllers/userController.ts';
-import { isAuthenticated } from '../middlewares/authenticate.ts';
+} from '../controllers/userController.js';
+import { isAuthenticated } from '../middlewares/authenticate.js';
 
 const router: Router = Router();
 

@@ -1,8 +1,8 @@
 import { type Request, type Response, type NextFunction } from 'express';
-import { errorHandler } from '../utilities/index.ts';
+import { errorHandler } from '../utilities/index.js';
 import jwt from 'jsonwebtoken';
-import config from '../config/config.ts';
-import { UserDB } from '../models/userSchema.ts';
+import config from '../config/config.js';
+import { UserDB } from '../models/userSchema.js';
 
 interface ExtendedJwtPayload extends jwt.JwtPayload {
   id: string;

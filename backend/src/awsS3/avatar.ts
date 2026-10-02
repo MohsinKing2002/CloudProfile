@@ -3,8 +3,8 @@ import {
   DeleteObjectCommand,
   ListObjectsV2Command,
 } from '@aws-sdk/client-s3';
-import { clientS3 } from './index.ts';
-import config from '../config/config.ts';
+import { clientS3 } from './index.js';
+import config from '../config/config.js';
 
 // 1. validate avatar object existance.
 export const avatarObjectExists = async (

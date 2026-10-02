@@ -1,6 +1,6 @@
-import { agent } from './agent.ts';
-import { buildContext } from './contextBuilder.ts';
-import { retrieveRelevantChunks } from './retriever.ts';
+import { agent } from './agent.js';
+import { buildContext } from './contextBuilder.js';
+import { retrieveRelevantChunks } from './retriever.js';
 
 export const askProjectAssitant = async (question: string) => {
   // 1. retrieve relevant chunks

@@ -5,12 +5,12 @@ import {
   hashPassword,
   verifyPassword,
   generateToken,
-} from '../utilities/index.ts';
-import { UserDB } from '../models/userSchema.ts';
-import { askProjectAssitant } from '../agent/ragService.ts';
-import { generateAvatarUploadURL } from '../awsS3/presignedUpload.ts';
-import { avatarObjectExists, deleteAvatarObject } from '../awsS3/avatar.ts';
-import { generateAvatarViewURL } from '../awsS3/presignedDownload.ts';
+} from '../utilities/index.js';
+import { UserDB } from '../models/userSchema.js';
+import { askProjectAssitant } from '../agent/ragService.js';
+import { generateAvatarUploadURL } from '../awsS3/presignedUpload.js';
+import { avatarObjectExists, deleteAvatarObject } from '../awsS3/avatar.js';
+import { generateAvatarViewURL } from '../awsS3/presignedDownload.js';
 
 /************** avatar - expiry & validation ******************/
 const avatarExpiry = Date.now() + 60 * 60 * 1000;

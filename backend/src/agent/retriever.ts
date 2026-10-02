@@ -1,5 +1,5 @@
-import { KnowledgeChunkDB } from '../models/knowledgeChunkSchema.ts';
-import { generateEmbeddings } from './generateEmbeddings.ts';
+import { KnowledgeChunkDB } from '../models/knowledgeChunkSchema.js';
+import { generateEmbeddings } from './generateEmbeddings.js';
 
 export const retrieveRelevantChunks = async (question: string) => {
   // 1. create embedding for question

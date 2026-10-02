@@ -1,5 +1,5 @@
 import cron from 'node-cron';
-import { cleanupOrphanAvatars } from '../services/avatarCleanup.service.ts';
+import { cleanupOrphanAvatars } from '../services/avatarCleanup.service.js';
 
 export const startAvatarCleanupCron = () => {
   cron.schedule(

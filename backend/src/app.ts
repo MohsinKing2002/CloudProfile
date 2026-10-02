@@ -1,11 +1,11 @@
 import express, { type Express } from 'express';
 import cors from 'cors';
-import config from './config/config.ts';
+import config from './config/config.js';
 import cookieParser from 'cookie-parser';
-import userRoutes from './routes/userRoute.ts';
-import { connectDB } from './config/db.ts';
-import { startAvatarCleanupCron } from './cron/avatarCleanup.cron.ts';
-import { globalErrorHandler } from './middlewares/globalErrorHandler.ts';
+import userRoutes from './routes/userRoute.js';
+import { connectDB } from './config/db.js';
+import { startAvatarCleanupCron } from './cron/avatarCleanup.cron.js';
+import { globalErrorHandler } from './middlewares/globalErrorHandler.js';
 
 const app: Express = express();
 

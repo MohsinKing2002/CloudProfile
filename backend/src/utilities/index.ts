@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import type { Response } from 'express';
-import config from '../config/config.ts';
+import config from '../config/config.js';
 
 /**
  * Helper func: Response Handler

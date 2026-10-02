@@ -1,10 +1,10 @@
 /************** Purpose: Read knowledge → chunk it → embed it → save it to MongoDB.  **************/
 
-import { connectDB } from '../config/db.ts';
-import { KnowledgeChunkDB } from '../models/knowledgeChunkSchema.ts';
-import { generateChunkId } from './generateChunkId.ts';
-import { generateEmbeddings } from './generateEmbeddings.ts';
-import { createChunks } from './textChunking.ts';
+import { connectDB } from '../config/db.js';
+import { KnowledgeChunkDB } from '../models/knowledgeChunkSchema.js';
+import { generateChunkId } from './generateChunkId.js';
+import { generateEmbeddings } from './generateEmbeddings.js';
+import { createChunks } from './textChunking.js';
 
 const ingestKnowledge = async () => {
   // 1. connect mongodb

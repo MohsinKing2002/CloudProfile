@@ -1,5 +1,5 @@
-import { deleteAvatarObject, listAvatarObjects } from '../awsS3/avatar.ts';
-import { UserDB } from '../models/userSchema.ts';
+import { deleteAvatarObject, listAvatarObjects } from '../awsS3/avatar.js';
+import { UserDB } from '../models/userSchema.js';
 
 const ORPHAN_GRACE_PERIOD = 24 * 60 * 60 * 1000;
 

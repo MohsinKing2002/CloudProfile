@@ -1,7 +1,7 @@
 import { ChatPromptTemplate } from '@langchain/core/prompts';
 import { ChatGroq } from '@langchain/groq';
 import { RunnableSequence } from '@langchain/core/runnables';
-import config from '../config/config.ts';
+import config from '../config/config.js';
 
 const model = new ChatGroq({
   apiKey: config.GROK_API_KEY,
