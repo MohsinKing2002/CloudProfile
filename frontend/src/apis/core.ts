@@ -31,7 +31,7 @@ export const processApiRequest = async (
   method: Method,
   url: string,
   body?: any,
-  config?: any
+  config?: any,
 ): Promise<any> => {
   try {
     const response = await api.request<ApiResponse>({
@@ -70,7 +70,7 @@ export const processApiRequest = async (
         break;
 
       case 404:
-        Toast.error("API not found");
+        Toast.error(message ?? "API not found");
         break;
 
       case 500:
@@ -85,7 +85,7 @@ export const processApiRequest = async (
       "ERROR: Handling API call || status:",
       status,
       "& message:",
-      message
+      message,
     );
     return null;
   }
