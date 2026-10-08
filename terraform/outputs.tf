@@ -7,3 +7,8 @@ output "ec2_instance_id" {
   description = "EC2 instance ID"
   value       = aws_instance.cloudprofile.id
 }
+
+output "elastic_ip" {
+  description = "Elastic IP address of cloudprofile EC2 instance"
+  value       = aws_eip.cloudprofile.public_ip
+}
