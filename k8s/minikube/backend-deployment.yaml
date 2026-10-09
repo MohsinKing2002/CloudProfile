@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloudprofile-backend
+  namespace: cloudprofile
+spec:
+  selector:
+    matchLabels:
+      app: cloudprofile-backend
+  template:
+    metadata:
+      labels:
+        app: cloudprofile-backend
+    spec:
+      containers:
+        - name: backend
+          image: mohsinking2002/cloudprofile-backend:1.1.1
+          ports:
+            - containerPort: 5001
+          envFrom:
+            - secretRef:
+                name: cloudprofile-backend-secret
