@@ -3,11 +3,21 @@ kind: Ingress
 metadata:
   name: cloudprofile-ingress
   namespace: cloudprofile
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.middlewares: cloudprofile-redirect-https@kubernetescrd
 
 spec:
   ingressClassName: traefik
+
+  tls:
+    - hosts:
+        - cloudprofile.mohsin.asif-dev.site
+      secretName: cloudprofile-tls
+
   rules:
-    - http:
+    - host: cloudprofile.mohsin.asif-dev.site
+      http:
         paths:
           - path: "/api"
             pathType: Prefix
