@@ -13,7 +13,7 @@ variable "availability_Zone" {
 variable "instance_type" {
   description = "EC2 instance type"
   type        = string
-  default     = "t2.micro"
+  default     = "t3a.medium"
 }
 
 variable "ssh_cidr" {
