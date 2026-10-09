@@ -6,5 +6,6 @@ terraform/terraform.tfvars
 terraform/*.tfplan
 
 
-##============== terraform .gitginore ==============##
-~/aws_keys
+##============== secrets and cred for local use. ==============##
+~/*
+@cmd-ref.md
