@@ -1,4 +1,4 @@
-# CloudProfile
+# CloudProfile - AI Powered(RAG based) Full Stack Web Application
 
 **A production-style full-stack AI-powered web application built with the MERN stack, containerized with Docker, deployed on AWS EC2, and automated with Github Actions**
 
